@@ -1,0 +1,141 @@
+import numpy as np
+import pandas as pd
+from matplotlib import pyplot as plt
+from IPython.display import Image
+
+jan_trip = pd.read_csv('../input/case-study/01_2022tripdata.csv')
+feb_trip = pd.read_csv('../input/case-study/02_2022tripdata.csv')
+mar_trip = pd.read_csv('../input/case-study/03_2022tripdata.csv')
+april_trip = pd.read_csv('../input/case-study/04_2022tripdata.csv')
+may_trip = pd.read_csv('../input/case-study/05_2022tripdata.csv')
+june_trip = pd.read_csv('../input/case-study/06_2022tripdata.csv')
+july_trip = pd.read_csv('../input/case-study/07_2022tripdata.csv')
+aug_trip = pd.read_csv('../input/case-study/08_2022tripdata.csv')
+sep_trip = pd.read_csv('../input/case-study/09_2022tripdata.csv')
+oct_trip = pd.read_csv('../input/case-study/10_2022publictripdata.csv')
+nov_trip = pd.read_csv('../input/case-study/11_2022tripdata.csv')
+dec_trip = pd.read_csv('../input/case-study/12_2022tripdata.csv')
+
+print(jan_trip.columns) 
+print(feb_trip.columns)
+print(mar_trip.columns) 
+print(april_trip.columns)
+print(may_trip.columns) 
+print(june_trip.columns) 
+print(july_trip.columns) 
+print(aug_trip.columns) 
+print(sep_trip.columns) 
+print(nov_trip.columns) 
+print(dec_trip.columns) 
+
+print(jan_trip.info()) 
+print(feb_trip.info())
+print(mar_trip.info()) 
+print(april_trip.info())
+print(may_trip.info()) 
+print(june_trip.info()) 
+print(july_trip.info()) 
+print(aug_trip.info()) 
+print(sep_trip.info()) 
+print(nov_trip.info())
+print(dec_trip.info()) 
+
+def conv_int_to_str(data):
+    data['start_station_id'] = data['start_station_id'].apply(str)
+    data['end_station_id'] = data['end_station_id'].apply(str)
+
+conv_int_to_str(jan_trip)
+conv_int_to_str(feb_trip)
+conv_int_to_str(mar_trip) 
+conv_int_to_str(april_trip)
+conv_int_to_str(may_trip) 
+conv_int_to_str(june_trip) 
+conv_int_to_str(july_trip) 
+conv_int_to_str(aug_trip) 
+conv_int_to_str(sep_trip) 
+conv_int_to_str(nov_trip)
+conv_int_to_str(dec_trip) 
+
+print(jan_trip.info()) 
+print(feb_trip.info())
+print(mar_trip.info()) 
+print(april_trip.info())
+print(may_trip.info()) 
+print(june_trip.info()) 
+print(july_trip.info()) 
+print(aug_trip.info()) 
+print(sep_trip.info()) 
+print(nov_trip.info())
+print(dec_trip.info()) 
+
+year = [jan_trip, feb_trip, mar_trip, april_trip, may_trip, june_trip, july_trip, aug_trip, sep_trip, oct_trip, nov_trip, dec_trip]
+year_trip = pd.concat(year)
+print(year_trip.info())
+year_trip.head()
+
+year_trip.drop_duplicates(keep=False) 
+
+year_trip['started_at'] = pd.to_datetime(year_trip['started_at'])
+year_trip['ended_at'] = pd.to_datetime(year_trip['ended_at'])
+year_trip.info()
+
+year_trip.drop(year_trip.loc[:,'start_lat':'end_lng'].columns, axis=1, inplace=True)
+year_trip.head()
+
+#column for time the trip started
+year_trip['time'] = year_trip['started_at'].dt.strftime('%H:%M')
+
+#column for day of the week the trip started
+year_trip['day_of_the_week'] = year_trip['started_at'].dt.day_name()
+
+#column for month when the trip started
+year_trip['month'] = year_trip['started_at'].dt.month_name()
+
+#column for year when the trip started
+year_trip['year'] = year_trip['started_at'].dt.year
+
+#combining 'month' & 'year' column
+year_trip['month_year'] = pd.to_datetime(year_trip['month'].astype(str)+year_trip['year'].astype(str),format='%B%Y').dt.strftime('%b-%Y')
+year_trip['trip_duration_in_min'] = (year_trip['ended_at'] - year_trip['started_at']).dt.total_seconds().div(60).astype(float)
+year_trip.head()
+print(len(year_trip[year_trip['trip_duration_in_min']<0]))
+
+print(len(year_trip[year_trip['start_station_name'].str.contains("TEST")==True]))
+print(len(year_trip[year_trip['start_station_name'].str.contains("test")==True]))
+print(len(year_trip[year_trip['start_station_name'].str.contains("Test")==True]))
+year_trip.info()
+index_num = year_trip[year_trip['trip_duration_in_min']<0].index
+year_trips = year_trip.drop(index_num)
+year_trips.info()
+
+index_num = year_trips[year_trips['start_station_name'].str.contains("TEST" or "test" or "Test")==True].index
+year_trips = year_trips.drop(index_num)
+year_trips.info()
+
+pd.DataFrame(year_trips['member_casual'].value_counts()).rename(columns={'member_casual':'No. of Customers'})
+
+print('Sum of Duration Time of Members :- ' + str(int(year_trips.loc[year_trips['member_casual'] == 'member', 'trip_duration_in_min'].sum())) + ' Minutes')
+print('Sum of Duration Time of Casuals :- ' + str(int(year_trips.loc[year_trips['member_casual'] == 'casual', 'trip_duration_in_min'].sum())) + ' Minutes')
+
+year_trips.drop(['month','year'],axis=1,inplace=True)
+year_trips.head()
+
+year_trips.to_csv('year_trips.csv',index=False,header=True)
+#statistical summary of 'trip_duration_in_min' column
+
+pd.DataFrame(year_trips['trip_duration_in_min'].describe().apply(lambda x: format(x, 'f')))
+
+#statistical summary of 'trip_duration_in_min' of Members column
+
+pd.DataFrame(year_trips.loc[year_trips['member_casual'] == 'member', 'trip_duration_in_min'].describe().apply(lambda x: format(x,'f'))).rename(columns={'trip_duration_in_min':'Members'})
+
+#statistical summary of 'trip_duration_in_min' of Casuals column
+
+pd.DataFrame(year_trips.loc[year_trips['member_casual'] == 'casual', 'trip_duration_in_min'].describe().apply(lambda x: format(x,'f'))).rename(columns={'trip_duration_in_min':'Casuals'})
+
+Image('../input/images/Sheet 1.png', width = 350, height = 500)
+Image('../input/images/Sheet 2.png', width = 500, height = 500)
+Image('../input/images/Sheet 3.png', width = 300, height = 500)
+Image('../input/images/Sheet 4.png', width = 300, height = 500)
+Image('../input/images/Sheet 5.png', width = 800, height = 500)
+Image('../input/images/Sheet 6.png', width = 1000, height = 700)
