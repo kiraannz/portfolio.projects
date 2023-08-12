@@ -1,0 +1,173 @@
+# portfolio
+Portfolio Projects for Covid19 deaths and vaccinations
+
+-- View the Covid Death Table --
+Select *
+From portfolio..CovidDeaths
+Where continent IS NOT NULL
+Order by 3,4
+
+---- View the Covid Vaccination Table --
+--Select *
+--From portfolio..CovidVaccinations
+--Order by 3,4
+
+Select location, total_cases,new_cases, total_deaths, population
+From portfolio..CovidDeaths
+Order by 1,2
+
+-- Total cases vs Total Deaths --
+Select location, total_cases, total_deaths, (total_deaths/total_cases)*100 AS Death_Percentage
+From portfolio..CovidDeaths
+Where continent IS NOT NULL
+Order by 1,2
+
+-- Total cases vs Total Deaths for any location --
+Select location, total_cases, total_deaths, (total_deaths/total_cases)*100 AS Death_Percentage
+From portfolio..CovidDeaths
+Where location like '%Pakistan%'
+and continent IS NOT NULL
+Order by 1,2
+
+-- Total cases vs Population --
+Select location, population, total_cases, (total_cases/population)*100 AS Affected_Percentage
+From portfolio..CovidDeaths
+Where location like '%Pakistan%'
+and continent IS NOT NULL
+Order by 1,2
+
+-- Highest Infection Rate vs Population --
+Select location, population, MAX(total_cases) AS Maximum_Infection_Count, MAX((total_cases/population))*100 AS Affected_Percentage
+From portfolio..CovidDeaths
+Where continent IS NOT NULL
+GROUP BY location, population
+Order by Affected_Percentage DESC
+
+-- Countries with highest death count per population --
+Select location, MAX(cast(total_deaths as int)) AS Maximum_Death_Count
+From portfolio..CovidDeaths
+Where continent IS NOT NULL
+GROUP BY location
+Order by Maximum_Death_Count DESC
+
+-- Analysing data by Continents --
+Select location, MAX(cast(total_deaths as int)) AS Maximum_Death_Count
+From portfolio..CovidDeaths
+Where continent IS NULL
+GROUP BY location
+Order by Maximum_Death_Count DESC
+
+-- Continents with Max Death Count --
+Select continent, MAX(cast(total_deaths as int)) AS Maximum_Death_Count
+From portfolio..CovidDeaths
+Where continent IS NOT NULL
+GROUP BY continent
+Order by Maximum_Death_Count DESC
+
+-- Global Analysis --
+Select date,SUM(new_cases)
+From portfolio..CovidDeaths
+WHERE continent IS NOT NULL
+GROUP BY date
+Order by 1,2
+
+Select date,SUM(new_cases) AS Total_cases, SUM(cast(new_deaths as int)) AS Total_Deaths, SUM(new_cases)/SUM(cast(new_deaths as int))*100 AS Affected_Percentage
+From portfolio..CovidDeaths
+WHERE continent IS NOT NULL
+GROUP BY date
+Order by 1,2
+
+-- Total population vs Vaccinations --
+Select deaths.continent, deaths.location, deaths.date, deaths.population, vacc.new_vaccinations
+From portfolio..CovidDeaths as deaths
+Join portfolio..CovidVaccinations as vacc
+	On deaths.location = vacc.location
+	and deaths.date = vacc.date
+where deaths.continent is not null
+order by 2,3
+
+-- Total population vs Vaccinations --
+Select deaths.continent, deaths.location, deaths.date, deaths.population, vacc.new_vaccinations, SUM(Cast(vacc.new_vaccinations as int)) OVER (PARTITION BY deaths.location)
+From portfolio..CovidDeaths as deaths
+Join portfolio..CovidVaccinations as vacc
+	On deaths.location = vacc.location
+	and deaths.date = vacc.date
+where deaths.continent is not null
+order by 2,3
+
+-- Total population vs Vaccinations --
+Select deaths.continent, deaths.location, deaths.date, deaths.population, vacc.new_vaccinations, 
+SUM(Cast(vacc.new_vaccinations as int)) OVER (PARTITION BY deaths.location ORDER BY deaths.location, deaths.date) as People_Vaccinated,
+(people_vaccinated/population)*100 as Percentage_Vaccinated
+From portfolio..CovidDeaths as deaths
+Join portfolio..CovidVaccinations as vacc
+	On deaths.location = vacc.location
+	and deaths.date = vacc.date
+where deaths.continent is not null
+order by 2,3
+
+with PopvsVac (Continent, Location, Date, Population, new_vaccinations, People_Vaccinated)
+as (
+Select deaths.continent, deaths.location, deaths.date, deaths.population, vacc.new_vaccinations, 
+SUM(Cast(vacc.new_vaccinations as int)) OVER (PARTITION BY deaths.location ORDER BY deaths.location, deaths.date) as People_Vaccinated
+From portfolio..CovidDeaths as deaths
+Join portfolio..CovidVaccinations as vacc
+	On deaths.location = vacc.location
+	and deaths.date = vacc.date
+where deaths.continent is not null
+)
+SELECT *
+FROM PopvsVac
+
+-- New Code --
+with PopvsVac (Continent, Location, Date, Population, new_vaccinations, People_Vaccinated)
+as (
+Select deaths.continent, deaths.location, deaths.date, deaths.population, vacc.new_vaccinations, 
+SUM(Cast(vacc.new_vaccinations as int)) OVER (PARTITION BY deaths.location ORDER BY deaths.location, deaths.date) as People_Vaccinated
+From portfolio..CovidDeaths as deaths
+Join portfolio..CovidVaccinations as vacc
+	On deaths.location = vacc.location
+	and deaths.date = vacc.date
+where deaths.continent is not null
+)
+SELECT *, (people_vaccinated/population)*100
+FROM PopvsVac
+
+
+-- Temporary Table --
+
+DROP Table if exists #PERCENTAGE_POPULATION_VACCINATED
+CREATE TABLE #PERCENTAGE_POPULATION_VACCINATED
+(
+Continent nvarchar(255),
+Location nvarchar(255),
+Date datetime,
+Population numeric,
+People_Vaccinated numeric
+)
+Insert into #PERCENTAGE_POPULATION_VACCINATED
+Select deaths.continent, deaths.location, deaths.date, deaths.population, vacc.new_vaccinations, 
+SUM(Cast(vacc.new_vaccinations as int)) OVER (PARTITION BY deaths.location ORDER BY deaths.location, deaths.date) as People_Vaccinated,
+(people_vaccinated/population)*100 as Percentage_Vaccinated
+From portfolio..CovidDeaths as deaths
+Join portfolio..CovidVaccinations as vacc
+	On deaths.location = vacc.location
+	and deaths.date = vacc.date
+where deaths.continent is not null
+
+SELECT *, (people_vaccinated/population)*100
+FROM #PERCENTAGE_POPULATION_VACCINATED
+
+-- Create View for Visualisation --
+
+create view PERCENTAGE_POPULATION_VACCINATED as
+Select deaths.continent, deaths.location, deaths.date, deaths.population, vacc.new_vaccinations, 
+SUM(Cast(vacc.new_vaccinations as int)) OVER (PARTITION BY deaths.location ORDER BY deaths.location, deaths.date) as People_Vaccinated
+From portfolio..CovidDeaths as deaths
+Join portfolio..CovidVaccinations as vacc
+	On deaths.location = vacc.location
+	and deaths.date = vacc.date
+where deaths.continent is not null
+
+SELECT *
+FROM PERCENTAGE_POPULATION_VACCINATED
